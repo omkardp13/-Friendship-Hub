@@ -1,0 +1,19 @@
+<input type="text"
+       class="form-control"
+       bsDatepicker
+       [bsConfig]="bsConfig"
+       [maxDate]="maxDate"
+       (bsValueChange)="onDateChange($event)">
+
+
+  <label>{{ label }}</label>
+
+  <!-- MinLength error -->
+  <div *ngIf="control?.hasError('minlength')" class="invalid-feedback text-start">
+    {{ label }} must be at least {{ control?.errors?.['minlength'].requiredLength }} characters.
+  </div>
+
+  <!-- Generic error handling -->
+  <div *ngIf="control?.invalid && control?.touched && !control?.hasError('minlength')" class="invalid-feedback text-start">
+    {{ label }} is invalid.
+  </div>

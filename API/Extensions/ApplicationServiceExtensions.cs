@@ -40,6 +40,8 @@ namespace API.Extensions
 
             Services.AddSingleton<PresenceTracker>();
 
+            Services.AddScoped<IPhotoRepository, PhotoRepository>();
+
             return Services;
         }
     }

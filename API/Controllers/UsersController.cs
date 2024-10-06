@@ -65,14 +65,13 @@ we need to use await operator to tell this method that we're going to wait for i
 
 
         [Authorize(Roles = "Member")]
-        [HttpGet("{username}")]  //api/users/2
+        [HttpGet("{username}")]  //api/users/2      
         public async Task<ActionResult<MemberDto>> GetUser(string username)
         {
-            var user = await unitOfWork.UserRepository.GetMemberAsync(username);
-
-            if(user == null) return NotFound();
-
-            return user;
+            var currentUsername = User.GetUsername();
+            return await unitOfWork.UserRepository.GetMemberAsync(username,
+            isCurrentUser: currentUsername == username
+            );
         }
 
 
@@ -101,34 +100,27 @@ we need to use await operator to tell this method that we're going to wait for i
         [HttpPost("add-photo")]
         public async Task<ActionResult<PhotoDto>> AddPhoto(IFormFile file)
         {
-            var user = await unitOfWork.UserRepository.GetUserByUsernameAsync(User.GetUsername());
-
+            var user = await
+            unitOfWork.UserRepository.GetUserByUsernameAsync(User.GetUsername());
             if (user == null) return BadRequest("Cannot update user");
-
             var result = await photoService.AddPhotoAsync(file);
-
-            if(result.Error !=null) return BadRequest(result.Error.Message);
-
+            if (result.Error != null) return BadRequest(result.Error.Message);
             var photo = new Photo
             {
                 Url = result.SecureUrl.AbsoluteUri,
                 PublicId = result.PublicId
             };
-
-            if(user.Photos.Count==0)
-            {
-                photo.IsMain = true;
-            }
-
             user.Photos.Add(photo);
-
-            if (await unitOfWork.Complete()) 
+            if (await unitOfWork.Complete())
                 return CreatedAtAction(nameof(GetUser),
-                    new { username=user.UserName},mapper.Map<PhotoDto>(photo));
-
-
-                 return BadRequest("Problem adding photos");
+                new { username = user.UserName }, mapper.Map<PhotoDto>(photo));
+            return BadRequest("Problem adding photo");
         }
+
+
+
+
+
 
         [HttpPut("set-main-photo/{photoId:int}")]
         public async Task<ActionResult> SetMainPhoto(int photoId)
@@ -154,31 +146,21 @@ we need to use await operator to tell this method that we're going to wait for i
         }
 
         [HttpDelete("delete-photo/{photoId:int}")]
-
         public async Task<ActionResult> DeletePhoto(int photoId)
         {
-            var user = await unitOfWork.UserRepository.GetUserByUsernameAsync(User.GetUsername());
-
+            var user = await
+            unitOfWork.UserRepository.GetUserByUsernameAsync(User.GetUsername());
             if (user == null) return BadRequest("User not found");
-
-            var photo=user.Photos.FirstOrDefault(x=> x.Id == photoId);  
-
-            if(photo == null || photo.IsMain) return BadRequest("This photo cannot be deleted");
-
-            if(photo.PublicId !=null)
+            var photo = await unitOfWork.PhotoRepository.GetPhotoById(photoId);
+            if (photo == null || photo.IsMain) return BadRequest("This photo cannot be deleted");
+if (photo.PublicId != null)
             {
                 var result = await photoService.DeletePhotoAync(photo.PublicId);
-                
-                if(result.Error !=null) return BadRequest(result.Error.Message);
+                if (result.Error != null) return BadRequest(result.Error.Message);
             }
-
             user.Photos.Remove(photo);
-
             if (await unitOfWork.Complete()) return Ok();
-
-
             return BadRequest("Problem deleting photo");
-
         }
 
     }

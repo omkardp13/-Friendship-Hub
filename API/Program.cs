@@ -22,13 +22,25 @@ builder.Services.AddApplicationServices(builder.Configuration);
 
 builder.Services.AddIdentityService(builder.Configuration);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngularApp", corsBuilder =>
+    {
+        corsBuilder.WithOrigins("http://localhost:4200")
+                   .AllowAnyHeader()
+                   .AllowAnyMethod()
+                   .AllowCredentials();  // Allows credentials (cookies, etc.)
+    });
+});
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionMiddleware>();
 
-app.UseCors(builder => builder.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:4200").AllowCredentials());
+//app.UseCors(builder => builder.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:4200").AllowCredentials().AddPolicy("AllowAngularApp"));
 
 
+app.UseCors("AllowAngularApp");
 
 app.UseHttpsRedirection();
 

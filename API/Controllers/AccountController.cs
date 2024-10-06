@@ -3,6 +3,7 @@ using API.DTOs;
 using API.Entities;
 using API.Interfaces;
 using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,13 +20,15 @@ namespace API.Controllers
         private readonly UserManager<AppUser> userManager;
         private readonly ITokenService tokenService;
         private readonly IMapper mapper;
+        private readonly IUnitOfWork unitOfWork;
 
         // Constructor for dependency injection
-        public AccountController(UserManager<AppUser> _userManager, ITokenService _tokenService, IMapper _mapper)
+        public AccountController(UserManager<AppUser> _userManager, ITokenService _tokenService, IMapper _mapper,IUnitOfWork _unitOfWork)
         {
             userManager = _userManager;
             tokenService = _tokenService;
             mapper = _mapper;
+            unitOfWork = _unitOfWork;
         }
         [HttpPost("register")] //POST: api/account/register?username=dave&password=pwd;       
         
@@ -93,5 +96,21 @@ namespace API.Controllers
             };
         }
 
-    }
+
+        [Authorize(Policy = "ModeratePhotoRole")]
+        [HttpPost("approve-photo/{photoId}")]
+        public async Task<ActionResult> ApprovePhoto(int photoId)
+        {
+            var photo = await unitOfWork.PhotoRepository.GetPhotoById(photoId);
+            if (photo == null) return BadRequest("Could not get photo from db");
+            photo.IsApproved = true;
+            var user = await unitOfWork.UserRepository.GetUserByPhotoId(photoId);
+            if (user == null) return BadRequest("Could not get user from db");
+            if (!user.Photos.Any(x => x.IsMain)) photo.IsMain = true;
+            await unitOfWork.Complete();
+            return Ok();
+        }
+
+
+        }
 }
